@@ -35,8 +35,9 @@ PHP 8.1+ (sem framework) · MySQL/MariaDB · HTML + CSS puro · Google Gemini AP
 1. **Copie a pasta** `rota-alagoas` para `C:\xampp\htdocs\`.
 2. Abra o **XAMPP Control Panel** e inicie **Apache** e **MySQL**.
 3. Acesse **http://localhost/phpmyadmin** → aba **Importar** → escolha `database/rota_alagoas.sql` → **Executar**.
-   (O script cria o banco `rota_alagoas` com dados de exemplo e os 75 pontos turísticos da planilha de pesquisa do grupo.)
-   **Já tinha o banco importado?** Para não perder roteiros e avaliações, importe só `database/atualizacao_pontos_planilha.sql` (com o banco `rota_alagoas` selecionado).
+   (O script cria o banco `rota_alagoas` com dados de exemplo e os 77 pontos turísticos da planilha de pesquisa do grupo.)
+   **Já tinha o banco importado?** Para não perder roteiros e avaliações, importe só `database/atualizacao_pontos_planilha.sql` e depois `database/atualizacao_sugeridos.sql` (com o banco `rota_alagoas` selecionado).
+   **Coordenadas dos pontos (opcional):** com internet, rode `php ferramentas/geocodificar_pontos.php` (XAMPP no Linux: `/opt/lampp/bin/php`). Ele busca no OpenStreetMap e gera `database/coordenadas_pontos.sql` para importar.
 4. Na pasta `config`, **copie** `config.example.php` e renomeie a cópia para **`config.php`**.
 5. *(Para usar a IA)* Gere uma chave gratuita em **https://aistudio.google.com/apikey** e cole em `config.php`:
    ```php

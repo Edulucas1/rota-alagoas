@@ -198,7 +198,9 @@ INSERT INTO pontos_turisticos (id, nome, cidade, bairro, categoria, descricao, e
 (72, 'Piscinas Naturais de Taocas e Barra Grande', 'Maragogi', NULL, 'natureza', 'Outras opções de recifes de corais para mergulho na maré baixa.', NULL, 180, 80.0, 'pago', 1, 'manha', 'natureza;aventura', NULL, NULL, 1),
 (73, 'Passeio de Buggy (Maragogi)', 'Maragogi', NULL, 'aventura', 'Roteiro pelo litoral norte ou sul, passando por praias e mirantes.', NULL, 240, 120.0, 'pago', 0, 'manha', 'aventura;praia', NULL, NULL, 1),
 (74, 'Mirante de Maragogi (Alto do Cruzeiro)', 'Maragogi', NULL, 'natureza', 'Vista panorâmica da cidade e do mar, com letreiros para fotos.', NULL, 30, 0.0, 'gratuito', 0, 'fim_de_tarde', 'fotografia', NULL, NULL, 1),
-(75, 'Ruínas da Igreja de São Bento', 'Maragogi', 'São Bento', 'historia', 'Vestígios históricos com vista privilegiada da região.', NULL, 30, 0.0, 'gratuito', 0, 'tarde', 'cultura;historia', NULL, NULL, 1);
+(75, 'Ruínas da Igreja de São Bento', 'Maragogi', 'São Bento', 'historia', 'Vestígios históricos com vista privilegiada da região.', NULL, 30, 0.0, 'gratuito', 0, 'tarde', 'cultura;historia', NULL, NULL, 1),
+(76, 'Bairro de Jaraguá', 'Maceió', 'Jaraguá', 'historia', 'Bairro do antigo porto de Maceió, com sobrados do fim do século XIX construídos por comerciantes portugueses. Foi reduto boêmio por décadas e hoje é área tombada.', NULL, 90, 0, 'gratuito', 0, 'noite', 'cultura;historia;vida_noturna', NULL, NULL, 1),
+(77, 'Praia do Sobral', 'Maceió', 'Trapiche da Barra', 'praia', 'Praia urbana na região do Trapiche da Barra, com ondas para surfe dos dois lados; melhor perto da maré cheia.', NULL, 90, 0, 'gratuito', 0, 'manha', 'praia;esporte', NULL, NULL, 1);
 
 -- Eventos fictícios com datas relativas à data de importação (sempre no futuro)
 INSERT INTO eventos (titulo, descricao, cidade, local, inicio, fim, categoria, preco, organizador_id) VALUES
