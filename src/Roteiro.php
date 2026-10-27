@@ -98,7 +98,7 @@ class Roteiro
 
         $itens = Database::executar(
             'SELECT i.*, p.cidade AS ponto_cidade, p.categoria AS ponto_categoria, p.duracao_min, p.custo_estimado,
-                    p.latitude, p.longitude,
+                    p.latitude, p.longitude, p.depende_mare,
                     e.local AS evento_local, e.cidade AS evento_cidade, e.preco AS evento_preco
              FROM roteiro_itens i
              LEFT JOIN pontos_turisticos p ON p.id = i.ponto_id
@@ -142,6 +142,41 @@ class Roteiro
             }
         }
         return [$marcadores, $semLocal];
+    }
+
+    /** Centro aproximado das cidades (para a previsão quando o dia não tem ponto com coordenadas). */
+    public const CIDADES = [
+        'Maceió' => [-9.6658, -35.7353, true], 'Marechal Deodoro' => [-9.7100, -35.8950, true],
+        'Barra de São Miguel' => [-9.8380, -35.8920, true], 'Roteiro' => [-9.8340, -35.9790, true],
+        'Maragogi' => [-9.0122, -35.2225, true], 'São Miguel dos Milagres' => [-9.2650, -35.3760, true],
+        'Porto de Pedras' => [-9.1600, -35.2950, true], 'Barra de Santo Antônio' => [-9.4040, -35.5070, true],
+        'Piaçabuçu' => [-10.4060, -36.4340, true], 'Penedo' => [-10.2900, -36.5860, false],
+        'Piranhas' => [-9.6240, -37.7570, false], 'União dos Palmares' => [-9.1630, -36.0310, false],
+    ];
+
+    /**
+     * Onde o visitante está em cada dia: coordenadas do 1º ponto com localização, senão o centro
+     * da cidade do dia. "litoral" diz se faz sentido mostrar maré.
+     */
+    public static function localDosDias(array $r): array
+    {
+        $locais = [];
+        foreach ($r['dias_itens'] as $dia => $itens) {
+            // cidade do 1º item do dia (dia livre = cidade onde está hospedado)
+            $cidade = $itens ? ($itens[0]['ponto_cidade'] ?? $itens[0]['evento_cidade'] ?? $r['cidade_base']) : $r['cidade_base'];
+            $coord = null;
+            foreach ($itens as $i) {
+                if ($i['ponto_id'] && $i['latitude'] !== null && $coord === null) {
+                    $coord = [(float) $i['latitude'], (float) $i['longitude']];
+                    $cidade = $i['ponto_cidade'];
+                }
+            }
+            $ref = self::CIDADES[$cidade] ?? null;
+            if (!$coord && $ref) $coord = [$ref[0], $ref[1]];
+            if (!$coord) continue;   // cidade desconhecida e sem coordenadas: sem previsão
+            $locais[$dia] = ['lat' => $coord[0], 'lng' => $coord[1], 'cidade' => $cidade, 'litoral' => $ref ? $ref[2] : true];
+        }
+        return $locais;
     }
 
     public static function excluir(int $id, int $usuarioId): bool

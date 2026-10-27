@@ -10,6 +10,7 @@ if (!$r) {
 }
 $nomesInteresses = array_map(fn($i) => CATEGORIAS_PONTO[$i] ?? $i, explode(',', $r['interesses']));
 [$marcadores, $semLocal] = Roteiro::marcadoresDoMapa($r);
+$locais = Roteiro::localDosDias($r);
 // Cor de cada dia: a mesma no mapa e na linha do tempo
 const CORES_DIA = ['#0f766e', '#ea6a2a', '#7c3aed', '#0369a1', '#be123c', '#4d7c0f', '#a16207'];
 $corDia = fn(int $d) => CORES_DIA[($d - 1) % count(CORES_DIA)];
@@ -69,12 +70,16 @@ require __DIR__ . '/src/layout/topo.php';
         <?php $dataDia = date('Y-m-d', strtotime($r['data_inicio'] . ' +' . ($dia - 1) . ' days')); ?>
         <section class="dia">
             <h2><span class="bolinha-dia" style="background: <?= $corDia($dia) ?>"></span>Dia <?= $dia ?> <span class="muted">· <?= data_br($dataDia) ?></span></h2>
+            <?php if (isset($locais[$dia])): $l = $locais[$dia]; ?>
+                <div class="clima-dia" data-dia="<?= $dia ?>" data-data="<?= $dataDia ?>" data-lat="<?= $l['lat'] ?>"
+                     data-lng="<?= $l['lng'] ?>" data-litoral="<?= $l['litoral'] ? 1 : 0 ?>" data-cidade="<?= e($l['cidade']) ?>"></div>
+            <?php endif; ?>
             <?php if (!$itens): ?>
                 <p class="muted">Dia livre para descansar ou explorar por conta própria.</p>
             <?php endif; ?>
             <ol class="linha-tempo">
                 <?php foreach ($itens as $i): ?>
-                    <li class="<?= $i['evento_id'] ? 'item-evento' : 'item-ponto' ?>">
+                    <li class="<?= $i['evento_id'] ? 'item-evento' : 'item-ponto' ?>"<?= !empty($i['depende_mare']) ? ' data-mare="1" data-horario="' . e(substr((string) $i['horario'], 0, 5)) . '"' : '' ?>>
                         <span class="hora"><?= $i['horario'] ? substr($i['horario'], 0, 5) : '—' ?></span>
                         <div>
                             <?php if ($i['ponto_id']): ?>
@@ -96,6 +101,74 @@ require __DIR__ . '/src/layout/topo.php';
         </section>
     <?php endforeach; ?>
 </div>
+<?php if ($locais): ?>
+<script>
+/* Previsão do tempo e marés: Open-Meteo (gratuito, sem chave). Roda no navegador do visitante. */
+(function () {
+    const DIAS_TEMPO = 15, DIAS_MARE = 7;          // limites de antecedência das previsões
+    const hoje = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Maceio'}));
+    hoje.setHours(0, 0, 0, 0);
+    const diasAte = iso => Math.round((new Date(iso + 'T00:00:00') - hoje) / 864e5);
+    const tempo = c => c === 0 ? ['☀️', 'Céu limpo'] : c <= 2 ? ['🌤️', 'Poucas nuvens'] : c === 3 ? ['☁️', 'Nublado']
+        : c <= 48 ? ['🌫️', 'Neblina'] : c <= 57 ? ['🌦️', 'Garoa'] : c <= 67 || (c >= 80 && c <= 82) ? ['🌧️', 'Chuva']
+        : c <= 77 ? ['🌨️', 'Neve'] : ['⛈️', 'Trovoadas'];
+    const hora = t => t.slice(11, 13) + 'h';
+    const minutos = hhmm => +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5);
+
+    document.querySelectorAll('.clima-dia').forEach(async caixa => {
+        const {data, lat, lng, litoral} = caixa.dataset;
+        const falta = diasAte(data);
+        if (falta < 0) return;                       // dia que já passou
+        const partes = [];
+        if (falta > DIAS_TEMPO) {
+            caixa.innerHTML = '<span class="muted">A previsão do tempo aparece 15 dias antes da viagem.</span>';
+            return;
+        }
+        const q = 'latitude=' + lat + '&longitude=' + lng + '&timezone=America%2FMaceio&start_date=' + data + '&end_date=' + data;
+        try {
+            const t = await (await fetch('https://api.open-meteo.com/v1/forecast?' + q
+                + '&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max')).json();
+            const d = t.daily;
+            const [icone, texto] = tempo(d.weather_code[0]);
+            partes.push('<span class="clima-item">' + icone + ' ' + texto + ', ' + Math.round(d.temperature_2m_min[0]) + '–'
+                + Math.round(d.temperature_2m_max[0]) + ' °C' + (d.precipitation_probability_max[0] != null
+                ? ' · chuva ' + d.precipitation_probability_max[0] + '%' : '') + '</span>');
+        } catch (e) { /* sem internet ou serviço fora: não mostra o tempo */ }
+
+        if (litoral === '1' && falta <= DIAS_MARE) {
+            try {
+                const m = await (await fetch('https://marine-api.open-meteo.com/v1/marine?' + q + '&hourly=sea_level_height_msl')).json();
+                const h = m.hourly.time, n = m.hourly.sea_level_height_msl;
+                const baixas = [];                    // mínimos locais da altura do mar = marés baixas
+                for (let k = 1; k < n.length - 1; k++) {
+                    if (n[k] != null && n[k] <= n[k - 1] && n[k] < n[k + 1]) baixas.push(h[k]);
+                }
+                if (baixas.length) {
+                    partes.push('<span class="clima-item">🌊 Maré baixa por volta das ' + baixas.map(hora).join(' e ') + '</span>');
+                    // Passeios que dependem da maré: compara com o horário marcado
+                    caixa.closest('.dia').querySelectorAll('li[data-mare]').forEach(li => {
+                        const marcado = li.dataset.horario;
+                        const perto = baixas.reduce((a, b) => Math.abs(minutos(b.slice(11, 16)) - minutos(marcado || '12:00'))
+                            < Math.abs(minutos(a.slice(11, 16)) - minutos(marcado || '12:00')) ? b : a);
+                        const longe = marcado && Math.abs(minutos(perto.slice(11, 16)) - minutos(marcado)) > 120;
+                        const aviso = document.createElement('p');
+                        aviso.className = 'dica dica-mare' + (longe ? ' dica-alerta' : '');
+                        aviso.textContent = longe
+                            ? '🌊 A maré baixa prevista é por volta das ' + hora(perto) + ': considere trocar o horário deste passeio.'
+                            : '🌊 Horário bom: maré baixa prevista por volta das ' + hora(perto) + '.';
+                        li.querySelector('div').appendChild(aviso);
+                    });
+                }
+            } catch (e) { /* sem previsão de maré */ }
+        }
+        if (partes.length) {
+            caixa.innerHTML = partes.join('') + '<span class="clima-fonte">Previsão: Open-Meteo'
+                + (partes.length > 1 ? '. Maré estimada; confira a tábua da Marinha.' : '') + '</span>';
+        }
+    });
+})();
+</script>
+<?php endif; ?>
 <?php if ($marcadores): ?>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous"></script>
 <script>
