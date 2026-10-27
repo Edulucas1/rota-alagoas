@@ -1,0 +1,10 @@
+# NUNCA versionar a chave da API nem a senha do banco
+config/config.php
+.env
+
+# Sistema / editores
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+*.log
