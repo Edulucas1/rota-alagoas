@@ -11,6 +11,7 @@ $ativo = fn(string ...$arqs) => in_array($pagina, $arqs, true) ? ' class="ativo"
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($titulo ?? 'Rota Alagoas') ?> · Rota Alagoas</title>
     <link rel="stylesheet" href="assets/style.css">
+    <?= $cabecalhoExtra ?? '' ?>
 </head>
 <body>
 <header class="topo">

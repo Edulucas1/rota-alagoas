@@ -98,6 +98,7 @@ class Roteiro
 
         $itens = Database::executar(
             'SELECT i.*, p.cidade AS ponto_cidade, p.categoria AS ponto_categoria, p.duracao_min, p.custo_estimado,
+                    p.latitude, p.longitude,
                     e.local AS evento_local, e.cidade AS evento_cidade, e.preco AS evento_preco
              FROM roteiro_itens i
              LEFT JOIN pontos_turisticos p ON p.id = i.ponto_id
@@ -114,6 +115,33 @@ class Roteiro
             $r['dias_itens'][(int) $i['dia']][] = $i;
         }
         return $r;
+    }
+
+    /**
+     * Pontos do roteiro que têm coordenadas, numerados dentro de cada dia, para o mapa.
+     * Devolve [marcadores, nomes dos pontos sem localização].
+     */
+    public static function marcadoresDoMapa(array $r): array
+    {
+        $marcadores = [];
+        $semLocal = [];
+        foreach ($r['dias_itens'] as $dia => $itens) {
+            $n = 0;
+            foreach ($itens as $i) {
+                if (!$i['ponto_id']) continue;               // eventos ainda não têm coordenadas
+                $n++;
+                if ($i['latitude'] === null || $i['longitude'] === null) {
+                    $semLocal[] = $i['titulo'];
+                    continue;
+                }
+                $marcadores[] = [
+                    'dia' => (int) $dia, 'n' => $n, 'id' => (int) $i['ponto_id'], 'titulo' => $i['titulo'],
+                    'horario' => $i['horario'] ? substr($i['horario'], 0, 5) : '',
+                    'lat' => (float) $i['latitude'], 'lng' => (float) $i['longitude'],
+                ];
+            }
+        }
+        return [$marcadores, $semLocal];
     }
 
     public static function excluir(int $id, int $usuarioId): bool
